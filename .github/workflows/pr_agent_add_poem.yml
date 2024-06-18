@@ -1,0 +1,100 @@
+# ********************************************************
+# PRに対するポエムを書く
+# ポエムをpromptに、画像生成したものをコメントする
+# ********************************************************
+name: PR-Agent-Add-Poem
+
+# ********************************************************
+# 起動条件
+# ********************************************************
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+# ********************************************************
+# 実行されるジョブ
+# ********************************************************
+jobs:
+  # 実行名
+  pr-agent-add-poem:
+    # 実行マシン
+    runs-on: ubuntu-latest
+
+    # 環境変数
+    env:
+      # github secretsから取得
+      OPEN_ID_API_KEY: ${{ secrets.OPENAI_KEY }}
+      GITHUB_PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # 実行アクション
+    steps:
+      # ********************************************************
+      # チェックアウト
+      # ********************************************************
+      - uses: actions/checkout@v2
+
+      # ********************************************************
+      # Python Installation
+      # ********************************************************
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      # ********************************************************
+      # Pythonライブラリ情報のアップデート
+      # ********************************************************
+      - name: PIP UPDATE
+        run: pip install --upgrade pip
+
+      # ********************************************************
+      # Pythonライブラリのインストール
+      # ********************************************************
+      - name: Install dependencies
+        run: pip install -r .github/workflows/python/requirements.txt
+
+      # ********************************************************
+      # 環境変数が設定されているか確認
+      # ********************************************************
+      - name: Check Environment Variables
+        run: echo $OPEN_ID_API_KEY
+
+      # ********************************************************
+      # PR番号の取得
+      # ********************************************************
+      - name: PR番号の取得スクリプト実行
+        uses: actions/github-script@v7
+        id: set-result
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const prNumber = context.payload.pull_request ? context.payload.pull_request.number : null;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            console.log('context: ' + prNumber);
+            console.log(context);
+
+            console.log('prNumber: ' + prNumber);
+            console.log('owner: ' + owner);
+            console.log('repo: ' + repo);
+
+            return { 
+              prNumber : prNumber, 
+              owner : owner,
+              repo : repo
+            };
+
+      # ********************************************************
+      # PR番号を表示
+      # ********************************************************
+      - name: Get PR Number
+        run: echo "${{steps.set-result.outputs.result}}"
+
+      # ********************************************************
+      # Python Scriptの実行
+      # - 引数にPR番号を渡す
+      # ********************************************************
+      - name: Run Python
+        run: python .github/workflows/python/main.py '${{steps.set-result.outputs.result}}'

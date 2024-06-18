@@ -1,0 +1,62 @@
+# ********************************************************
+# PR-Agentをgithub actionsで実行する
+# ********************************************************
+name: PR-Agent
+
+# ********************************************************
+# 起動条件
+# ********************************************************
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+# ********************************************************
+# 実行されるジョブ
+# ********************************************************
+jobs:
+  # 実行名
+  pr_agent_job:
+    # 実行条件
+    if: ${{ github.event.sender.type != 'Bot' }}
+    # 実行マシン
+    runs-on: ubuntu-latest
+    # botの権限
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: write
+
+    # 実行アクション
+    steps:
+      # ********************************************************
+      # PR-Agentの設定
+      # ********************************************************
+      - name: PR Agent action step
+        id: pragent
+        uses: Codium-ai/pr-agent@main
+        # 環境変数
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # 開始時に「レビュー・PR説明記入・改善コード提案」を自動で実行する
+          GITHUB_ACTION_CONFIG.AUTO_REVIEW: true
+          GITHUB_ACTION_CONFIG.AUTO_DESCRIBE: true
+          GITHUB_ACTION_CONFIG.AUTO_IMPROVE: true
+
+          # PRコメントをinline / normal切り替え（true: inline, false: normal）
+          PR_REVIEWER.INLINE_CODE_COMMENTS: true
+
+          # レビュー総評コメントである "PR Feedback" への追加プロンプト
+          PR_REVIEWER.EXTRA_INSTRUCTIONS: >-
+            Use In Japanese.
+          # プルリクの要約 "PR Descrition" に関する追加プロンプト
+          PR_DESCRIPTION.EXTRA_INSTRUCTIONS: >-
+            Use In Japanese.
+          # /improve で呼び出す修正コードの "Suggestion" 時の追加プロンプト
+          PR_CODE_SUGGESTIONS.EXTRA_INSTRUCTIONS: >-
+            Use In Japanese.
+
+          # AIモデルの設定
+          # CONFIG.MODEL: gpt-4o
+          CONFIG.MODEL: gpt-3.5-turbo

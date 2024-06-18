@@ -1,0 +1,5 @@
+pr-agent
+nest_asyncio
+pillow
+requests
+openai
